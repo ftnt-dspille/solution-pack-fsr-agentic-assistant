@@ -92,7 +92,8 @@ def state(c, man: dict) -> dict:
                      for col in r.get("columns") or [] for w in col.get("widgets") or []]}
         for d in rows if d.get("displayName") == title]
     sp = c.get("/api/3/solutionpacks", params={"name": man["name"], "$limit": 20}).get("hydra:member", [])
-    sp = [p for p in sp if p.get("name") == man["name"]]
+    # The widget shares the pack's name and is listed here too (type "widget").
+    sp = [p for p in sp if p.get("name") == man["name"] and p.get("type", "solutionpack") == "solutionpack"]
     out["pack"] = [{"version": p.get("version"), "installed": p.get("installed"),
                     "draft": p.get("draft")} for p in sp]
     return out
