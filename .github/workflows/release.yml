@@ -1,0 +1,76 @@
+# Builds and publishes the solution pack when a tag v<X.Y.Z> is pushed.
+#
+# The tag must equal pack_version in components.json. The build downloads the
+# connector and widget release assets pinned there, checks the pack with pyfsr's
+# export validator, and creates the release with:
+#   agentic-assistant-pack-<v>.zip     the pack (Import Wizard)
+#   agentic-assistant-release-<v>.zip  pack + README + user/admin guides
+#   agentic-assistant-pack.zip         the same pack under a fixed name, so
+#     .../releases/latest/download/agentic-assistant-pack.zip always works
+#
+# Pull requests and manual runs build and validate without releasing.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyfsr
+
+      - name: Verify the tag matches components.json
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          V="$(python -c "import json;print(json.load(open('components.json'))['pack_version'])")"
+          [ "${TAG#v}" = "$V" ] || { echo "::error::tag $TAG != pack_version $V"; exit 1; }
+
+      - name: Build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python scripts/build.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pack
+          path: dist/*.zip
+
+      - name: Create the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          V="${TAG#v}"
+          cp "dist/agentic-assistant-pack-$V.zip" dist/agentic-assistant-pack.zip
+          python - > /tmp/notes.md <<'PY'
+          import json
+          v = json.load(open("dist/versions.json"))
+          print(f"""Install with **Application Editor > Import Wizard**, not Content Hub.
+          Steps: README.md in `agentic-assistant-release-{v['version']}.zip`.
+
+          | Component | Version |
+          |---|---|
+          | Connector `connector-fsr-agentic-assistant` | {v['connector']} |
+          | Widget `agenticAssistant` | {v['agenticAssistant']} |
+          | Widget `agenticAssistantMonitor` | {v['agenticAssistantMonitor']} |
+          | Dashboard: Agentic Assistant Monitor | |
+          | Framework `fsr-playbooks` (installed by the connector) | {v['framework']} |""".replace("\n          ", "\n"))
+          PY
+          gh release create "$TAG" dist/agentic-assistant-pack-$V.zip \
+            dist/agentic-assistant-release-$V.zip dist/agentic-assistant-pack.zip \
+            --verify-tag --title "Agentic Assistant $V" --notes-file /tmp/notes.md

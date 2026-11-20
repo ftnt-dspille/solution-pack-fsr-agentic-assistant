@@ -1,0 +1,8 @@
+{
+  "pack_version": "1.2.0",
+  "connector": {"repo": "ftnt-dspille/fsr-agentic-assistant-connector", "tag": "v0.6.19"},
+  "widgets": [
+    {"name": "agenticAssistant", "repo": "ftnt-dspille/fsr-agentic-assistant-widget", "tag": "v1.4.2"},
+    {"name": "agenticAssistantMonitor", "repo": "ftnt-dspille/fsr-agentic-assistant-monitor-widget", "tag": "v1.1.1"}
+  ]
+}

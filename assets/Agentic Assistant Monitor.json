@@ -1,0 +1,32 @@
+{
+    "@context": "\/api\/3\/contexts\/Dashboard",
+    "@type": "Dashboard",
+    "isDefault": false,
+    "hidden": false,
+    "uuid": "80d9d1fc-1e87-4989-a70c-8a1dd302e113",
+    "displayName": "Agentic Assistant Monitor",
+    "type": "rows",
+    "templateType": "dashboard",
+    "roles": [],
+    "parentTemplateId": null,
+    "config": {
+        "rows": [
+            {
+                "columns": [
+                    {
+                        "widgets": [
+                            {
+                                "type": "agenticAssistantMonitor-1.0.4",
+                                "config": {
+                                    "wid": "49c8f77d-dd4f-4732-b354-b528b0892cc4"
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "filterArray": [],
+    "updateDate": null
+}
