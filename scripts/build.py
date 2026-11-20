@@ -152,10 +152,14 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--no-bundle", action="store_true")
     ap.add_argument("--connector-tgz", default=None,
                     help="local connector tarball instead of the release asset (testing only)")
+    ap.add_argument("--widget-tgz", action="append", default=[], metavar="NAME=PATH",
+                    help="local widget tarball instead of the release asset (testing only)")
+    ap.add_argument("--version", default=None, help="override pack_version (testing only)")
     args = ap.parse_args(argv)
 
     spec = json.loads(Path(args.components).read_text())
-    version = spec["pack_version"]
+    version = args.version or spec["pack_version"]
+    local_widgets = dict(x.split("=", 1) for x in args.widget_tgz)
 
     c = spec["connector"]
     conn_tgz = (Path(args.connector_tgz) if args.connector_tgz
@@ -168,11 +172,17 @@ def main(argv: list[str] | None = None) -> int:
 
     widgets = []
     for w in spec["widgets"]:
-        tgz = release_asset(w["repo"], w["tag"], rf"{re.escape(w['name'])}-.+\.tgz")
+        local = local_widgets.get(w["name"])
+        tgz = (Path(local) if local
+               else release_asset(w["repo"], w["tag"], rf"{re.escape(w['name'])}-.+\.tgz"))
         info = tgz_info(tgz)
         if info["name"] != w["name"]:
             raise SystemExit(f"{w['repo']}@{w['tag']}: tarball is {info['name']}, want {w['name']}")
-        check_tag(w["name"], w["tag"], info["version"])
+        if not local:
+            check_tag(w["name"], w["tag"], info["version"])
+        if info.get("development") is not False:
+            raise SystemExit(f"REFUSING: widget {w['name']} {info['version']} has development="
+                             f"{info.get('development')!r}; the pack ships release-form widgets only")
         widgets.append({**w, "version": info["version"], "tgz": tgz,
                         "title": info.get("title", w["name"])})
 
